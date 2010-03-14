@@ -104,22 +104,15 @@ def SBBXtoBX(data):
                 wgtc.append(o.good_count)
             avg.append(a)
 
-        # GISTEMP sort.
-        # We want to end up with IORDR, the permutation array that
-        # represents the sorter order.  IORDR[0] is the index (into the
-        # *wgtc* array) of the longest record, IORDR[1] the index of the
-        # next longest record, and so on.  We do that by decorating the
-        # *wgtc* array with indexes 0 to 99, and then extracting the
-        # (permuted) indexes into IORDR.
-        # :todo: should probably import from a purpose built module.
-        from step3 import sort
-        IORDR = range(nsubbox)
-        sort(IORDR, lambda x,y: wgtc[y] - wgtc[x])
+        # We want to end up with a permutation array that represents the
+        # sorting of records by decreasing order of length.
+        sorted_indices = sorted(range(nsubbox),
+                                    key=lambda x: wgtc[x], reverse=True)
 
         # From here to the "for" loop over the cells (below) we are
         # initialising data for the loop.  Primarily the AVGR and WTR
         # arrays.
-        nc = IORDR[0]
+        nc = sorted_indices[0]
 
         # Weights for the box's record.
         wtr = [a != MISSING for a in avg[nc]]
@@ -127,7 +120,7 @@ def SBBXtoBX(data):
         avgr = avg[nc][:]
 
         # Loop over the remaining cells.
-        for nc in IORDR[1:]:
+        for nc in sorted_indices[1:]:
             if wgtc[nc] >= parameters.subbox_min_valid:
                 series.combine(avgr, wtr, avg[nc], 1, 0,
                            combined_n_months/12, parameters.box_min_overlap)
