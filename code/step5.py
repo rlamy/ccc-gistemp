@@ -89,19 +89,17 @@ def SBBXtoBX(data):
         wgtc = []
         # Eat the records from land and ocean 100 (nsubbox) at a time.
         # In other words, all 100 subboxes for the box.
-        landsub,oceansub = zip(*itertools.islice(data, nsubbox))
-        # :todo: combine below zip with above zip?
-        for i, l, o in zip(range(nsubbox), landsub, oceansub):
+        for land_sb, ocean_sb in itertools.islice(data, nsubbox):
             a = [MISSING]*combined_n_months
-            if (o.good_count < parameters.subbox_min_valid
-                or l.d < parameters.subbox_land_range):
+            if (ocean_sb.good_count < parameters.subbox_min_valid
+                or land_sb.d < parameters.subbox_land_range):
                 # use land series for this subbox
-                a[land_offset:land_offset+len(l.series)] = l.series
-                wgtc.append(l.good_count)
+                a[land_offset:land_offset+len(land_sb.series)] = land_sb.series
+                wgtc.append(land_sb.good_count)
             else:
                 # use ocean series for this subbox
-                a[ocean_offset:ocean_offset+len(o.series)] = o.series
-                wgtc.append(o.good_count)
+                a[ocean_offset:ocean_offset+len(ocean_sb.series)] = ocean_sb.series
+                wgtc.append(ocean_sb.good_count)
             avg.append(a)
 
         # We want to end up with a permutation array that represents the
