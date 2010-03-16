@@ -67,7 +67,6 @@ def SBBXtoBX(data):
 
     # TODO: Formalise use of only monthlies, see step 3.
     assert land_meta.mavg == 6
-    NYRSIN = land_meta.monm/12
     combined_year_beg = min(land_meta.yrbeg, ocean_meta.yrbeg)
     # Index into the combined array of the first year of the land data.
     land_offset = 12*(land_meta.yrbeg-combined_year_beg)
@@ -83,7 +82,7 @@ def SBBXtoBX(data):
     info[4] = 2 * land_meta.monm + 5
     yield(info, land_meta.title)
 
-    for box_number,box in enumerate(eqarea.grid()):
+    for box in eqarea.grid():
         # Averages for the land and ocean (one series per subbox)...
         avg = []
         wgtc = []
