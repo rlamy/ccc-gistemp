@@ -61,6 +61,78 @@ def lerp(x, y, p):
     p = float(p)
     return y*p + (1-p)*x
 
+class Box(object):
+    """
+    A grid box bounded by meridians and parallels.
+
+    >>> box = Box(0, 10, -90, 0)
+    >>> [x for x in box]
+    [0, 10, -90, 0]
+    >>> box[0:2]
+    (0, 10)
+    """
+
+    def __init__(self, latS, latN, lonW, lonE):
+        self.latS = latS
+        self.latN = latN
+        self.lonW = lonW
+        self.lonE = lonE
+
+    def as_tuple(self):
+        return (self.latS, self.latN, self.lonW, self.lonE)
+
+    def __iter__(self):
+        for x in self.as_tuple():
+            yield x
+
+    def __getitem__(self, *args):
+        return self.as_tuple().__getitem__(*args)
+
+    @property
+    def centre(self):
+        """
+        Calculate the (latitude,longitude) pair for the centre of box/subbox.
+
+        This is the "equal area" centre in the sense that the area to the
+        north will equal the area to the south, and the same for east/west.
+
+        >>> Box(-10, 10, -10, 10).centre
+        (0.0, 0.0)
+
+        :Return:
+            The ``(latitude,longitude)`` for the box or subbox.
+
+        """
+        sinc = 0.5*(math.sin(self.latS*math.pi/180) + math.sin(self.latN*math.pi/180))
+        return (math.asin(sinc)*180/math.pi, 0.5*(self.lonW + self.lonE))
+
+    def subboxes(self, nx=10, ny=10):
+        """A generator for the subboxes of box."""
+
+        # Altitude for southern and northern border.
+        alts = math.sin(self.latS*math.pi/180)
+        altn = math.sin(self.latN*math.pi/180)
+        xstep, ystep = 1./float(nx), 1./float(ny)
+        for y in range(ny):
+            s = 180*math.asin(lerp(alts, altn, y*ystep))/math.pi
+            n = 180*math.asin(lerp(alts, altn, (y+1)*ystep))/math.pi
+            for x in range(nx):
+                w = lerp(self.lonW, self.lonE, x*xstep)
+                e = lerp(self.lonW, self.lonE, (x+1)*xstep)
+                yield Box(s, n, w, e)
+
+    def submesh(self, nx=10, ny=10):
+        """Return the mesh generating a regular nx*ny subgrid."""
+        xstep, ystep = 1./float(nx), 1./float(ny)
+        longitudes = [lerp(self.lonW, self.lonE, x*xstep) for x in range(nx+1)]
+
+        # Altitude for southern and northern border.
+        alts = math.sin(self.latS*math.pi/180)
+        altn = math.sin(self.latN*math.pi/180)
+        latitudes = [180*math.asin(lerp(alts, altn, y*ystep))/math.pi
+                                for y in range(ny+1)]
+        return longitudes, latitudes
+
 
 def northern40() :
     """Generator: Yields the 40 northern hemisphere boxes.
@@ -76,15 +148,15 @@ def northern40() :
         # number of horizontal boxes in band
         n = band_boxes[band]
         for i in range(n) :
-            lats = 180/math.pi*math.asin(band_altitude[band+1])
-            latn = 180/math.pi*math.asin(band_altitude[band])
-            lonw = -180 + 360*float(i)/n
-            lone = -180 + 360*float(i+1)/n
-            yield (lats, latn, lonw, lone)
+            latS = 180/math.pi*math.asin(band_altitude[band+1])
+            latN = 180/math.pi*math.asin(band_altitude[band])
+            lonW = -180 + 360*float(i)/n
+            lonE = -180 + 360*float(i+1)/n
+            yield (latS, latN, lonW, lonE)
 
 
 def southern40() :
-    """Generator: Yields the 40 southern hemisphere boxes.i
+    """Generator: Yields the 40 southern hemisphere boxes.
 
     The yielded value is a tuple of::
 
@@ -180,6 +252,18 @@ def gridsub() :
     for box in grid():
         yield (box, subgen(box))
 
+def smartgrid() :
+    """Generator: Yields 80 boxes each containing a subbox generator.
+
+    Each yielded box contains, in a general sense, 100 subboxes.
+    The 80 boxes are those corresponding to grid().
+
+    The order of the boxes is the same as `grid`.
+
+    """
+    for box in grid():
+        yield Box(*box)
+
 
 def grid8k() :
     """Generator: As `gridsub`, but flattened.
@@ -244,7 +328,7 @@ def gridJSON() :
     return str(list(itertools.imap(lambda x: map(list, x), gridR3())))
 
 
-def centre(box) :
+def centre(box):
     """Calculate the (latitude,longitude) pair for the centre of box/subbox.
 
     This the the "equal area" centre in the sense that the area to the
