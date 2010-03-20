@@ -18,12 +18,14 @@ class GridMap(Basemap):
         self.drawmapboundary()
         self.drawcoastlines()
 
-    def gridplot(self, data):
+    def gridplot(self, data, colorbar=True):
         """
         Plot gridded data as a heat map.
 
-        data: a 8000-long sequence of data-points corresponding to the subboxes
+        data: an 8000-item sequence of data-points corresponding to the subboxes
         returned by eqarea.grid8k, in the same order.
+
+        colorbar: whether to draw the colorbar
         """
         data = np.asanyarray(data)
         vmax, vmin = data.max(), data.min()
@@ -35,7 +37,8 @@ class GridMap(Basemap):
                                                         vmax=vmax, vmin=vmin)
             except ValueError:  #pcolor raises if none of the subboxes is drawable
                 pass
-        self.add_colorbar()
+        if colorbar:
+            self.add_colorbar()
 
     def add_colorbar(self, orientation=None):
         """
